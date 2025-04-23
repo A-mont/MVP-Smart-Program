@@ -5,6 +5,12 @@ use sails_rs::{
     collections::HashMap,
 };
 
+const MAX_ADMINS: usize = 100;
+const MAX_MVPS: usize = 1000;
+const MAX_VOTERS_PER_MVP: usize = 500;
+
+
+
 // Static variable for the contract's state
 pub static mut STATE: Option<State> = None;
 
@@ -105,6 +111,11 @@ impl Service {
     pub fn add_admin(&mut self, new_admin: ActorId) -> Result<Events, Errors> {
         let state = State::state_mut();
 
+        if state.admins.len() >= MAX_ADMINS {
+            return Err(Errors::MaxAdminsReached);
+        }
+        
+
         
         if !state.admins.contains(&msg::source()) {
             return Err(Errors::Unauthorized);
@@ -132,6 +143,11 @@ impl Service {
     pub fn add_mvp(&mut self, mvp: MVP) -> Result<Events, Errors> {
         let state = State::state_mut();
 
+        if state.mvps.len() >= MAX_MVPS {
+            return Err(Errors::MaxMVPsReached);
+        }
+        
+
         if !state.admins.contains(&msg::source()) {
             return Err(Errors::Unauthorized);
         }
@@ -157,6 +173,10 @@ impl Service {
         let state = State::state_mut();
     
         let mvp = state.mvps.get_mut(&mvp_id).ok_or(Errors::MVPNotFound)?;
+
+        if mvp.voter_wallets.len() >= MAX_VOTERS_PER_MVP {
+            return Err(Errors::MaxVotersReached);
+        }
     
 
         let voter = msg::source();
@@ -225,4 +245,7 @@ pub enum Events {
 pub enum Errors {
     Unauthorized,
     MVPNotFound,
+    MaxAdminsReached,
+    MaxVotersReached,
+    MaxMVPsReached
 }
