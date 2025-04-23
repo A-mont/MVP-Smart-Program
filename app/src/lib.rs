@@ -11,8 +11,8 @@ pub struct MVPMProgram;
 
 #[program]
 impl MVPMProgram {
-    pub fn new() -> Self {
-        Service::seed();
+    pub fn new(admin: ActorId) -> Self {
+        Service::seed(admin);
         Self
     }
 
