@@ -148,10 +148,6 @@ impl Service {
         }
         
 
-        if !state.admins.contains(&msg::source()) {
-            return Err(Errors::Unauthorized);
-        }
-
         state.mvps.insert(mvp.id, mvp);
 
         Ok(Events::MVPCreated)
