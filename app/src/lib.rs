@@ -7,10 +7,10 @@ pub mod services;
 
 use services::service::Service;
 
-pub struct MVPMProgram;
+pub struct Program;
 
 #[program]
-impl MVPMProgram {
+impl Program {
     pub fn new(admin: ActorId) -> Self {
         Service::seed(admin);
         Self

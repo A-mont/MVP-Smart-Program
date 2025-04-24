@@ -27,7 +27,7 @@ pub struct State {
 #[scale_info(crate = sails_rs::scale_info)]
 pub struct MVP {
     pub id: u32,
-    pub actor_id: ActorId,
+    pub owner: ActorId,
     pub project_name: String,
     pub description: String,
     pub logo: String,
@@ -247,5 +247,6 @@ pub enum Errors {
     MVPNotFound,
     MaxAdminsReached,
     MaxVotersReached,
-    MaxMVPsReached
+    MaxMVPsReached,
+    AlreadyVoted
 }
