@@ -17,6 +17,7 @@ pub static mut STATE: Option<State> = None;
 // Definition of the state with assigned macros
 #[derive(Clone, Default)]
 pub struct State {
+    pub all_mvps: u64,
     pub admins: Vec<ActorId>,
     pub mvps: HashMap<u32, MVP>,
 }
@@ -37,9 +38,9 @@ pub struct MVP {
     pub voter_wallets: Vec<ActorId>
 }
 
-// Implementation of the State struct
+
 impl State {
-    // Method for creating a new State
+    
     pub fn new(initial_admin: ActorId) -> Self {
         Self {
             admins: vec![initial_admin],
@@ -47,7 +48,7 @@ impl State {
         }
     }
 
-    // Initialize the state
+   
     pub fn init_state(initial_admin: ActorId) {
         unsafe {
             STATE = Some(Self::new(initial_admin));
@@ -73,6 +74,7 @@ impl State {
 #[codec(crate = sails_rs::scale_codec)]
 #[scale_info(crate = sails_rs::scale_info)]
 pub struct IoState {
+    pub all_mvps: u64,
     pub admins: Vec<ActorId>,
     pub mvps: Vec<MVP>,
 }
@@ -80,9 +82,9 @@ pub struct IoState {
 
 impl From<State> for IoState {
     fn from(value: State) -> Self {
-        let State { admins, mvps } = value;
+        let State { all_mvps, admins, mvps } = value;
         let mvps = mvps.into_iter().map(|(_, v)| v).collect();
-        Self { admins, mvps }
+        Self { all_mvps, admins, mvps }
     }
 }
 
@@ -146,9 +148,14 @@ impl Service {
         if state.mvps.len() >= MAX_MVPS {
             return Err(Errors::MaxMVPsReached);
         }
-        
 
+        if state.mvps.contains_key(&mvp.id) {
+            return Err(Errors::MVPAlreadyExists); 
+        }
+        
+        
         state.mvps.insert(mvp.id, mvp);
+        state.mvps = state.all_mvps.checked_add(1).ok_or(Errors::VotesOverflow)?;
 
         Ok(Events::MVPCreated)
     }
@@ -160,7 +167,12 @@ impl Service {
             return Err(Errors::Unauthorized);
         }
 
+
         state.mvps.remove(&mvp_id).ok_or(Errors::MVPNotFound)?;
+        state.all_mvps = state
+        .all_mvps
+        .checked_sub(1)
+        .ok_or(Errors::MVPCountUnderflow)?;
 
         Ok(Events::MVPRemoved)
     }
@@ -180,7 +192,7 @@ impl Service {
             return Err(Errors::AlreadyVoted);
         }
     
-        mvp.positive_votes += 1;
+        mvp.positive_votes = mvp.positive_votes.checked_add(1).ok_or(Errors::VotesOverflow)?;
         mvp.voter_wallets.push(voter);
     
         Ok(Events::VoteCasted)
@@ -206,10 +218,14 @@ impl Service {
         Ok(Events::MVPUpdated)
     }
 
-    pub fn mvps_list(&self) -> IoState {
-        State::state_ref().to_owned().into()
+    pub fn all_mvps(&self) -> u64 {
+        State::state_ref().all_mvps
     }
-
+    
+    pub fn mvps_list(&self) -> IoState {
+        State::state_ref().clone().into()
+    }
+    
     pub fn mvps_by_actor(&self, actor_id: ActorId) -> Vec<MVP> {
         State::state_ref()
             .mvps
@@ -244,5 +260,8 @@ pub enum Errors {
     MaxAdminsReached,
     MaxVotersReached,
     MaxMVPsReached,
-    AlreadyVoted
+    AlreadyVoted,
+    VotesOverflow,
+    MVPCountUnderflow,
+    MVPAlreadyExists
 }
