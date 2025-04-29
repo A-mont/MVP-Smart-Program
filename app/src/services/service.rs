@@ -155,7 +155,7 @@ impl Service {
         
         
         state.mvps.insert(mvp.id, mvp);
-        state.mvps = state.all_mvps.checked_add(1).ok_or(Errors::VotesOverflow)?;
+        state.all_mvps = state.all_mvps.checked_add(1).ok_or(Errors::VotesOverflow)?;
 
         Ok(Events::MVPCreated)
     }
